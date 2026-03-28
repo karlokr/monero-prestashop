@@ -1,0 +1,75 @@
+/**
+ * Monero Payment Module - Front CSS
+ */
+
+/* Constrain the payment option logo in checkout */
+.payment-option img[src*="monero"],
+.payment-options img[src*="monero"],
+#payment-option-1-container img[src*="monero"] {
+    max-height: 30px !important;
+    width: auto !important;
+    vertical-align: middle;
+}
+
+.monero-payment-page {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.monero-payment-page .h1 {
+    margin-bottom: 1.5rem;
+}
+
+.monero-payment-box {
+    margin-bottom: 2rem;
+}
+
+.monero-payment-box .card-body {
+    padding: 2rem;
+}
+
+.monero-status {
+    margin-bottom: 1.5rem;
+}
+
+.monero-qr {
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.monero-qr img {
+    display: block;
+}
+
+.monero-address-input {
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+.monero-detail label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #333;
+}
+
+.monero-validation-page {
+    max-width: 600px;
+    margin: 2rem auto;
+}
+
+.monero-validation-page h3 {
+    margin: 0;
+}
+
+.monero-payment-info {
+    padding: 0.5rem 0;
+    color: #666;
+}
+
+.monero-payment-return {
+    padding: 1rem 0;
+}

@@ -48,8 +48,6 @@ After payment confirms, orders are obfuscated: `ps_orders.module` becomes `ps_wi
 
 MIT
 
----
-
 ## Thank you for your support!
 
 Donations are graciously accepted for your continuing support in the development of this software and others.

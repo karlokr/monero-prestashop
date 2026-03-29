@@ -11,6 +11,9 @@ Accept Monero (XMR) payments in your PrestaShop store with a zero-knowledge ephe
 - Quantizes and jitters order timestamps to resist timing correlation attacks
 - Renders QR codes client-side on canvas (no external API calls)
 - Returns a customer-side receipt as the only record linking an order to a subaddress
+- Presents a confirmation gate before revealing payment details, warning the customer to stay on the page and download the signed receipt
+- Signs receipts with HMAC-SHA256 so the store can verify authenticity on refund/overpayment claims
+- Prevents copy/paste of on-screen receipt — the only way to save it is the download button
 
 ## Requirements
 
@@ -43,6 +46,26 @@ The module uses a `WalletRpcClient` class that communicates with `monero-wallet-
 Payment state is carried between browser and server through HMAC-SHA256 signed tokens that exist only in JavaScript memory. No subaddresses, amounts, or transaction data are written to the database, session, cookies, or filesystem.
 
 After payment confirms, orders are obfuscated: `ps_orders.module` becomes `ps_wirepayment`, all payment method fields become "Bank wire", and timestamps are quantized into 6-hour buckets with ±3 hours of random jitter.
+
+### Confirmation Gate & Signed Receipts
+
+Before the QR code and payment details are shown, the customer must acknowledge a confirmation screen explaining that:
+
+- They must not close or leave the page until payment is fully confirmed
+- A signed receipt will be available for download after confirmation — this is the only server-verified record linking their order to the Monero payment
+- The store requires this receipt to process refunds or overpayments
+- The subaddress in their wallet's transaction history can also help with refund claims, but small overpayments may not be honored without the signed receipt since the store only records the order total in fiat
+
+Receipts are signed with HMAC-SHA256 using the module's key. The store can verify any receipt a customer presents via `MoneroToken::verifyReceipt()`. The on-screen receipt text is not selectable or copyable — the only way to save it is the "Download Signed Receipt" button, which produces a `.txt` file containing the receipt data and its cryptographic signature.
+
+## Thank you for your support!
+
+Donations are graciously accepted for your continuing support in the development of this software and others.
+
+- **XMR**: 8BwmJHCfeaL9z3f1DwjStW7i1bvwKPL8oXhDnfcXbjRNSQAxVk9PVFv74SoFWVGWEVVQDCfb1bTsa1S53KP18zrwVizUeqe
+- **BTC**: bc1q3frlupheaz79v88t4hc8lgzfqwy4nekvc4gtj7
+- **ETH**: 0x9038E310D0a6B8E7819A8b7c33E53ebCF6964eF9
+- **SOL**: Gzea6q2aBmpUUPMwCcAUUPsxGqSua5k6HT8PaGHD3ewn
 
 ## License
 

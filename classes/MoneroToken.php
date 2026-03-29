@@ -123,4 +123,31 @@ class MoneroToken
 
         return $data;
     }
+
+    /**
+     * Sign a receipt so the customer can prove payment to the store.
+     *
+     * Produces a hex HMAC-SHA256 signature over the canonical receipt text.
+     * The admin can verify it by recomputing the HMAC with the same key.
+     *
+     * @param string $receiptText The plain-text receipt content
+     * @return string 64-character hex signature
+     */
+    public static function signReceipt($receiptText)
+    {
+        return hash_hmac('sha256', $receiptText, self::getKey());
+    }
+
+    /**
+     * Verify a receipt signature.
+     *
+     * @param string $receiptText The plain-text receipt content
+     * @param string $signature   The hex HMAC signature to verify
+     * @return bool True if the signature is valid
+     */
+    public static function verifyReceipt($receiptText, $signature)
+    {
+        $expected = hash_hmac('sha256', $receiptText, self::getKey());
+        return hash_equals($expected, $signature);
+    }
 }

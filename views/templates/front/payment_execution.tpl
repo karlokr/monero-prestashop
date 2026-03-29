@@ -12,7 +12,31 @@
             </div>
 
             {if $monero_status != 'error'}
-            <div id="monero-payment-details" class="row">
+            {* ── Confirmation gate — must accept before seeing payment details ── *}
+            <div id="monero-confirm-gate" class="card border-warning mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <strong>{l s='Important — Please Read Before Proceeding' mod='monero'}</strong>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-3">
+                        <li class="mb-2">{l s='Do not close or leave this page until your payment is fully confirmed. Closing the tab will permanently lose your payment session.' mod='monero'}</li>
+                        <li class="mb-2">{l s='After payment confirms, you will be able to download a signed receipt. This receipt is the only record linking your order to the Monero payment.' mod='monero'}</li>
+                        <li class="mb-2">{l s='If you need a refund or overpaid, the store will require this signed receipt to verify your claim. Without it, the link between your order and payment cannot be recovered.' mod='monero'}</li>
+                        <li class="mb-2">{l s='The subaddress recorded in your wallet\'s transaction history can also be used to help process refunds and overpayments. However, since the store only records the order total in fiat currency, small overpayments may not be honored without the signed receipt as proof of the exact amount of XMR that was quoted and received.' mod='monero'}</li>
+                    </ul>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="monero-confirm-check">
+                        <label class="form-check-label" for="monero-confirm-check">
+                            {l s='I understand that I must stay on this page and download the signed receipt after payment and that tampering with the receipt will result in the suspension of my account and the loss of funds.' mod='monero'}
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-warning" id="monero-confirm-proceed" disabled>
+                        {l s='Proceed to Payment' mod='monero'}
+                    </button>
+                </div>
+            </div>
+
+            <div id="monero-payment-details" class="row" style="display:none;">
                 {* QR Code *}
                 <div class="col-md-4 text-center mb-3">
                     <div id="monero-qrcode" class="monero-qr"></div>
@@ -63,12 +87,12 @@
             <div id="monero-receipt-box" class="card mt-4" style="display:none;">
                 <div class="card-header bg-success text-white">
                     <strong>{l s='Payment Receipt' mod='monero'}</strong>
-                    <small class="d-block">{l s='Save this — it is the only record linking your order to the payment.' mod='monero'}</small>
+                    <small class="d-block">{l s='Download the signed receipt below. It is the only record linking your order to the payment.' mod='monero'}</small>
                 </div>
                 <div class="card-body">
-                    <pre id="monero-receipt-text" class="mb-2" style="white-space:pre-wrap;word-break:break-all;font-size:0.85em;background:#f8f9fa;padding:1em;border-radius:4px;"></pre>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="monero-copy-receipt">
-                        &#128203; {l s='Copy Receipt' mod='monero'}
+                    <pre id="monero-receipt-text" class="mb-2" style="white-space:pre-wrap;word-break:break-all;font-size:0.85em;background:#f8f9fa;padding:1em;border-radius:4px;user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;"></pre>
+                    <button type="button" class="btn btn-success btn-sm" id="monero-download-receipt">
+                        &#11015; {l s='Download Signed Receipt' mod='monero'}
                     </button>
                 </div>
                 <div class="card-footer">
@@ -113,6 +137,30 @@
         {rdelim}
     {rdelim}
 
+    // ── Confirmation gate — checkbox enables button, button reveals payment details ──
+    var confirmCheck = document.getElementById('monero-confirm-check');
+    var confirmBtn   = document.getElementById('monero-confirm-proceed');
+    if (confirmCheck && confirmBtn) {ldelim}
+        confirmCheck.addEventListener('change', function() {ldelim}
+            confirmBtn.disabled = !this.checked;
+        {rdelim});
+        confirmBtn.addEventListener('click', function() {ldelim}
+            document.getElementById('monero-confirm-gate').style.display = 'none';
+            document.getElementById('monero-payment-details').style.display = '';
+        {rdelim});
+    {rdelim}
+
+    // ── Prevent copy/paste and context menu on receipt text ──
+    var receiptEl = document.getElementById('monero-receipt-text');
+    if (receiptEl) {ldelim}
+        receiptEl.addEventListener('copy', function(e) {ldelim} e.preventDefault(); {rdelim});
+        receiptEl.addEventListener('contextmenu', function(e) {ldelim} e.preventDefault(); {rdelim});
+        receiptEl.addEventListener('selectstart', function(e) {ldelim} e.preventDefault(); {rdelim});
+    {rdelim}
+
+    // Store signed receipt content for download
+    var signedReceiptContent = null;
+
     /**
      * Render a QR code onto a canvas element inside the given container.
      *
@@ -120,9 +168,9 @@
      * and draws black/white cells. Falls back to displaying the
      * raw data string if encoding fails.
      *
-     * @param {HTMLElement} container - DOM element to append the canvas to
-     * @param {string}      data     - String to encode (e.g., monero: URI)
-     * @param {number}      size     - Canvas width/height in pixels
+     * @param container - DOM element to append the canvas to
+     * @param data      - String to encode (e.g., monero: URI)
+     * @param size      - Canvas width/height in pixels
      */
     function moneroRenderQR(container, data, size) {ldelim}
         // Encode to byte-mode QR
@@ -157,8 +205,8 @@
      * Tries QR versions 1 through 40 (increasing capacity) until
      * the data fits. Returns the QR module grid object or null.
      *
-     * @param {string} data - The string to encode into a QR code
-     * @returns {Object|null} QR module grid with getModuleCount() and isDark(row, col), or null
+     * @param data - The string to encode into a QR code
+     * @returns QR module grid with getModuleCount() and isDark(row, col), or null
      */
     function generateQRModules(data) {ldelim}
         // Try byte-mode encoding, auto-detect version (1-40)
@@ -179,11 +227,11 @@
      * alignment patterns, timing patterns, format/version info), data
      * masking with penalty scoring, and best-mask selection.
      *
-     * @param {number} typeNumber            - QR version (1-40)
-     * @param {number} errorCorrectionLevel  - EC level: 1=L, 0=M, 3=Q, 2=H
-     * @param {string} data                  - Raw string to encode
-     * @returns {Object} QR grid with getModuleCount() and isDark(row, col)
-     * @throws {string} If data exceeds capacity for the given version/EC level
+     * @param typeNumber            - QR version (1-40)
+     * @param errorCorrectionLevel  - EC level: 1=L, 0=M, 3=Q, 2=H
+     * @param data                  - Raw string to encode
+     * @returns QR grid with getModuleCount() and isDark(row, col)
+     * @throws If data exceeds capacity for the given version/EC level
      */
     function makeQR(typeNumber, errorCorrectionLevel, data) {ldelim}
         var PAD0 = 0xEC, PAD1 = 0x11;
@@ -518,23 +566,22 @@
     {rdelim});
 
     /**
-     * Copy the payment receipt text to clipboard.
+     * Download the signed receipt as a .txt file.
      *
-     * Reads the textContent of #monero-receipt-text and writes it to
-     * the clipboard via navigator.clipboard.writeText(), falling back
-     * to a temporary textarea + execCommand('copy') if the API is unavailable.
+     * Creates a Blob from the signed receipt content stored in memory,
+     * generates a download link, and triggers a click to save the file.
      */
-    document.getElementById('monero-copy-receipt').addEventListener('click', function() {ldelim}
-        var text = document.getElementById('monero-receipt-text').textContent;
-        try {ldelim} navigator.clipboard.writeText(text); {rdelim}
-        catch(ex) {ldelim}
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-        {rdelim}
+    document.getElementById('monero-download-receipt').addEventListener('click', function() {ldelim}
+        if (!signedReceiptContent) return;
+        var blob = new Blob([signedReceiptContent], {ldelim} type: 'text/plain' {rdelim});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'monero-payment-receipt.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     {rdelim});
 
     // ── UI updaters ──
@@ -542,8 +589,8 @@
     /**
      * Update the status alert banner with a Bootstrap alert class and message.
      *
-     * @param {string} cls - Bootstrap alert class suffix (e.g., 'info', 'warning', 'success', 'danger')
-     * @param {string} msg - Status message text to display
+     * @param cls - Bootstrap alert class suffix (e.g., 'info', 'warning', 'success', 'danger')
+     * @param msg - Status message text to display
      */
     function setStatus(cls, msg) {ldelim}
         var el = document.getElementById('monero-status');
@@ -557,8 +604,8 @@
      * Makes the progress bar container visible, calculates the completion
      * percentage, and updates the bar width and label text.
      *
-     * @param {number} current  - Number of confirmations received so far
-     * @param {number} required - Total confirmations required for payment acceptance
+     * @param current  - Number of confirmations received so far
+     * @param required - Total confirmations required for payment acceptance
      */
     function showConfirmations(current, required) {ldelim}
         var wrap = document.getElementById('monero-conf-progress');
@@ -576,18 +623,20 @@
      * the receipt card with a copy button, sets the continue link href,
      * and optionally displays an overpayment warning if applicable.
      *
-     * @param {Object} data              - Callback response with receipt and redirect_url
-     * @param {Object} data.receipt      - Receipt details (order_reference, subaddress, amounts, timestamp)
-     * @param {string} data.redirect_url - URL for the PrestaShop order confirmation page
+     * @param data              - Callback response with receipt and redirect_url
+     * @param data.receipt      - Receipt details (order_reference, subaddress, amounts, timestamp)
+     * @param data.redirect_url - URL for the PrestaShop order confirmation page
      */
     function showReceipt(data) {ldelim}
-        // Hide payment details
+        // Hide payment details and confirmation gate
         var details = document.getElementById('monero-payment-details');
         if (details) details.style.display = 'none';
+        var gate = document.getElementById('monero-confirm-gate');
+        if (gate) gate.style.display = 'none';
 
-        // Build receipt text
+        // Build receipt text (display version — no signature)
         var r = data.receipt;
-        var lines = [
+        var displayLines = [
             '═══ MONERO PAYMENT RECEIPT ═══',
             '',
             'Order Reference : ' + r.order_reference,
@@ -598,11 +647,31 @@
             '',
             '═══════════════════════════════',
             '',
-            'SAVE THIS RECEIPT. It is the only',
-            'record linking your order to payment.',
+            'Download the signed receipt using',
+            'the button below.',
         ];
 
-        document.getElementById('monero-receipt-text').textContent = lines.join('\n');
+        // Build signed receipt text (for download file)
+        var signedLines = [
+            '═══ MONERO PAYMENT RECEIPT ═══',
+            '',
+            'Order Reference : ' + r.order_reference,
+            'Subaddress      : ' + r.subaddress,
+            'XMR Expected    : ' + r.xmr_expected + ' XMR',
+            'XMR Received    : ' + r.xmr_received + ' XMR',
+            'Timestamp       : ' + r.timestamp,
+            '',
+            '═══════════════════════════════',
+            '',
+            'HMAC-SHA256 Signature:',
+            r.signature,
+            '',
+            'This receipt is cryptographically signed.',
+            'The store can verify its authenticity.',
+        ];
+        signedReceiptContent = signedLines.join('\n');
+
+        document.getElementById('monero-receipt-text').textContent = displayLines.join('\n');
         document.getElementById('monero-continue-btn').href = data.redirect_url;
 
         // Overpayment notice

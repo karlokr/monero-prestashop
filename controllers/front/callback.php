@@ -262,6 +262,17 @@ class monerocallbackModuleFrontController extends ModuleFrontController
                 ]
             );
 
+            // Build canonical receipt text for signing
+            $receiptLines = [
+                'Order Reference : ' . $orderReference,
+                'Subaddress      : ' . $subaddressStr,
+                'XMR Expected    : ' . MoneroHelper::formatXmr($xmrAmountAtomic) . ' XMR',
+                'XMR Received    : ' . MoneroHelper::formatXmr($result['confirmed_received']) . ' XMR',
+                'Timestamp       : ' . date('Y-m-d H:i:s T'),
+            ];
+            $receiptText = implode("\n", $receiptLines);
+            $receiptSignature = MoneroToken::signReceipt($receiptText);
+
             // Return receipt — this is the ONLY record linking order ↔ crypto
             $this->jsonResponse([
                 'status' => 'paid',
@@ -274,6 +285,7 @@ class monerocallbackModuleFrontController extends ModuleFrontController
                     'overpaid' => $overpaid,
                     'overpayment_xmr' => $overpaymentXmr,
                     'timestamp' => date('Y-m-d H:i:s T'),
+                    'signature' => $receiptSignature,
                 ],
                 'redirect_url' => $confirmUrl,
             ]);

@@ -2,7 +2,7 @@
 /**
  * Monero Payment Module for PrestaShop
  *
- * Zero-evidence ephemeral payment architecture:
+ * Zero-knowledge ephemeral payment architecture:
  *   - No crypto data persists in the database
  *   - Orders are obfuscated to look like "Bank wire" payments
  *   - HMAC tokens live only in browser JS memory
